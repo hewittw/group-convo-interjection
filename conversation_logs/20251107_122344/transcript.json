@@ -1,0 +1,67 @@
+[
+  {
+    "timestamp": "12:23:55",
+    "role": "user",
+    "text": "I'm talking I'm target. I'm T I'm tagging a boom. Okay, bang talk, bang, talk."
+  },
+  {
+    "timestamp": "12:24:18",
+    "role": "user",
+    "text": "Uh, question"
+  },
+  {
+    "timestamp": "12:24:19",
+    "role": "assistant",
+    "text": "Okay, I'm in Q&A mode. What's your question?\n"
+  },
+  {
+    "timestamp": "12:25:04",
+    "role": "user",
+    "text": "Hello, are you listening?"
+  },
+  {
+    "timestamp": "12:25:05",
+    "role": "assistant",
+    "text": "Yes, I am listening. How can I help you?\n"
+  },
+  {
+    "timestamp": "12:25:27",
+    "role": "user",
+    "text": "Did you get that? I want you to tell me why birds can fly."
+  },
+  {
+    "timestamp": "12:25:28",
+    "role": "assistant",
+    "text": "Birds can fly because they have lightweight bodies, strong muscles, and feathers that create lift.\n"
+  },
+  {
+    "timestamp": "12:25:53",
+    "role": "user",
+    "text": "Why is the sky red?"
+  },
+  {
+    "timestamp": "12:25:54",
+    "role": "assistant",
+    "text": "The sky appears red during sunrise and sunset because sunlight has to travel through more of the atmosphere. This scatters away the blue light, leaving mostly red light to reach our eyes.\n"
+  },
+  {
+    "timestamp": "12:26:35",
+    "role": "user",
+    "text": "That's all. Thank you."
+  },
+  {
+    "timestamp": "12:26:51",
+    "role": "user",
+    "text": "And And"
+  },
+  {
+    "timestamp": "12:26:59",
+    "role": "user",
+    "text": "E N D N"
+  },
+  {
+    "timestamp": "12:27:21",
+    "role": "user",
+    "text": "End the conversation."
+  }
+]

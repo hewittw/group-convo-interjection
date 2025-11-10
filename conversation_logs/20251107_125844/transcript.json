@@ -1,0 +1,57 @@
+[
+  {
+    "timestamp": "12:58:52",
+    "role": "user",
+    "text": "Okay. How we doing?"
+  },
+  {
+    "timestamp": "12:58:59",
+    "role": "user",
+    "text": "Are you listening?"
+  },
+  {
+    "timestamp": "12:59:06",
+    "role": "user",
+    "text": "I I have a question."
+  },
+  {
+    "timestamp": "12:59:06",
+    "role": "assistant",
+    "text": "Okay, I'm in Q&A mode. What's your question?\n"
+  },
+  {
+    "timestamp": "12:59:38",
+    "role": "user",
+    "text": "Why is the sky blue?"
+  },
+  {
+    "timestamp": "12:59:39",
+    "role": "assistant",
+    "text": "The sky is blue because of something called Rayleigh scattering. Basically, the air molecules scatter sunlight, and blue light is scattered more than other colors because it travels as shorter, smaller waves.\n"
+  },
+  {
+    "timestamp": "13:00:22",
+    "role": "user",
+    "text": "Awesome. Thank you. That's all."
+  },
+  {
+    "timestamp": "13:00:23",
+    "role": "assistant",
+    "text": "Okay, that's all. Have a great day!\n"
+  },
+  {
+    "timestamp": "13:00:51",
+    "role": "user",
+    "text": "How are you doing? I'm doing well. They're listening. They're listening. We're a building. Boom. Boom, boom."
+  },
+  {
+    "timestamp": "13:01:04",
+    "role": "user",
+    "text": "Okay. Hello."
+  },
+  {
+    "timestamp": "13:01:18",
+    "role": "user",
+    "text": "Okay, this was fun. Terminate. Okay, this was fun. Terminate."
+  }
+]

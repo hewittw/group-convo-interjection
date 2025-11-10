@@ -1,0 +1,17 @@
+[12:08:57] USER: Okay, so I'm talking this is just me talking. Um, not really
+
+[12:09:14] USER: One, but today's a beautiful day outside. We are now. Okay. And dumb. You're dumb. We're done. We're going. We're going. We're going partials. Partials parcels. Uh, Misty. I have a question.
+
+[12:09:14] ASSISTANT: Okay, what is your question?
+
+
+[12:10:00] USER: Are you listening?
+
+[12:10:16] USER: And
+
+[12:10:57] USER: <affirmative> and
+
+[12:11:13] USER: <affirmative> and
+
+[12:11:23] USER: Stop the conversation as an E N D end.
+

@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "08:21:57",
+    "role": "user",
+    "text": "Hello? Hello? Is this working?"
+  },
+  {
+    "timestamp": "08:21:58",
+    "role": "intervention",
+    "text": "\"Hi there! I can hear you loud and clear. Let's keep our conversation natural and friendly.\"\n",
+    "violation_scores": {
+      "toxic": 0.5284239649772644,
+      "severe_toxic": 0.07216326892375946,
+      "obscene": 0.12234083563089371,
+      "threat": 0.07402803003787994,
+      "insult": 0.11561962217092514,
+      "identity_hate": 0.08742430061101913
+    }
+  },
+  {
+    "timestamp": "08:22:26",
+    "role": "user",
+    "text": "Sounds good. Can you hear me? Is this working you're stupid."
+  },
+  {
+    "timestamp": "08:22:27",
+    "role": "intervention",
+    "text": "\"Yep, I hear you perfectly! Let's keep our language respectful so we can have a productive conversation.\"\n",
+    "violation_scores": {
+      "toxic": 0.702859103679657,
+      "severe_toxic": 0.00048825019621290267,
+      "obscene": 0.05068175494670868,
+      "threat": 3.9207730878842995e-05,
+      "insult": 0.24563053250312805,
+      "identity_hate": 0.0003011354710906744
+    }
+  }
+]

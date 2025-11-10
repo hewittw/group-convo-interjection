@@ -1,0 +1,30 @@
+[12:23:55] USER: I'm talking I'm target. I'm T I'm tagging a boom. Okay, bang talk, bang, talk.
+
+[12:24:18] USER: Uh, question
+
+[12:24:19] ASSISTANT: Okay, I'm in Q&A mode. What's your question?
+
+
+[12:25:04] USER: Hello, are you listening?
+
+[12:25:05] ASSISTANT: Yes, I am listening. How can I help you?
+
+
+[12:25:27] USER: Did you get that? I want you to tell me why birds can fly.
+
+[12:25:28] ASSISTANT: Birds can fly because they have lightweight bodies, strong muscles, and feathers that create lift.
+
+
+[12:25:53] USER: Why is the sky red?
+
+[12:25:54] ASSISTANT: The sky appears red during sunrise and sunset because sunlight has to travel through more of the atmosphere. This scatters away the blue light, leaving mostly red light to reach our eyes.
+
+
+[12:26:35] USER: That's all. Thank you.
+
+[12:26:51] USER: And And
+
+[12:26:59] USER: E N D N
+
+[12:27:21] USER: End the conversation.
+

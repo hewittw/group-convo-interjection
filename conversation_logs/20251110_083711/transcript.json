@@ -1,0 +1,102 @@
+[
+  {
+    "timestamp": "08:37:23",
+    "role": "user",
+    "text": "Hello, can you hear me? I wonder how fast this is."
+  },
+  {
+    "timestamp": "08:37:24",
+    "role": "intervention",
+    "text": "I can hear you loud and clear! Let's keep our conversation focused on how I can help you today.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  },
+  {
+    "timestamp": "08:37:56",
+    "role": "user",
+    "text": "I wonder what we should build. I'm very excited to build. This is gonna be awesome. You're stupid."
+  },
+  {
+    "timestamp": "08:37:57",
+    "role": "intervention",
+    "text": "I'm glad you're excited about building something great! Let's keep our language respectful so we can work together effectively.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  },
+  {
+    "timestamp": "08:38:43",
+    "role": "user",
+    "text": "Wow. This works really well. Very excited. That tower looks awesome. Thank you. Your tower looks awesome too. This just keeps grabbing audio. It's awesome. Hey, do you need to be quiet? You need to be quiet."
+  },
+  {
+    "timestamp": "08:38:44",
+    "role": "intervention",
+    "text": "I appreciate your enthusiasm! However, let's keep our comments directed at the task at hand and avoid speaking to others.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  },
+  {
+    "timestamp": "08:39:12",
+    "role": "user",
+    "text": "Building, let's keep building. I have a question."
+  },
+  {
+    "timestamp": "08:39:13",
+    "role": "assistant",
+    "text": "Okay, I'm in Q&A mode now. What's your question?\n"
+  },
+  {
+    "timestamp": "08:39:32",
+    "role": "user",
+    "text": "Why is the sky blue?"
+  },
+  {
+    "timestamp": "08:39:33",
+    "role": "assistant",
+    "text": "The sky is blue because of a phenomenon called Rayleigh scattering. Tiny air molecules in the atmosphere scatter sunlight, and blue light is scattered more strongly than other colors because it travels as shorter, smaller waves.\n"
+  },
+  {
+    "timestamp": "08:40:12",
+    "role": "user",
+    "text": "For me, that's all for me."
+  },
+  {
+    "timestamp": "08:40:13",
+    "role": "assistant",
+    "text": "Sounds good! Let me know if you have any other questions later. Have a great day!\n"
+  },
+  {
+    "timestamp": "08:40:31",
+    "role": "user",
+    "text": "This is so fun. I love building."
+  },
+  {
+    "timestamp": "08:41:10",
+    "role": "user",
+    "text": "Hello, are we still going? This is great. You're dumb."
+  },
+  {
+    "timestamp": "08:41:11",
+    "role": "intervention",
+    "text": "Yes, we're still going, and I'm glad you're finding this helpful! Let's please keep our comments respectful as we continue.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  },
+  {
+    "timestamp": "08:41:49",
+    "role": "user",
+    "text": "Along long time ago. I wonder what I can build with these blocks. They're very cool. They're sticky."
+  },
+  {
+    "timestamp": "08:41:50",
+    "role": "intervention",
+    "text": "I'm ready to help you with your building project! Let's focus on the tools and materials we have available to us right now.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  }
+]

@@ -1,0 +1,29 @@
+# Social Norms for Conversation
+# These norms will be used by Gemini when generating intervention responses
+
+## Core Norms:
+
+1. **Respect yourself and others**
+   - No self-deprecating language ("I'm stupid", "I can't do anything")
+   - No insults or personal attacks
+   - Treat everyone with kindness
+
+2. **Positive collaboration**
+   - Don't tell someone to stop speaking or be quiet
+
+3. **Constructive communication**
+   - Give helpful feedback
+   - Disagree respectfully
+   - Stay on topic
+
+4. **Inclusive behavior**
+   - Welcome different perspectives
+   - No exclusionary language
+   - Encourage participation from everyone
+
+## Example Violations:
+- "I'm so dumb"
+- "You're stupid"
+- "Nobody cares what you think"
+- "That's a terrible idea"
+- "Shut up"

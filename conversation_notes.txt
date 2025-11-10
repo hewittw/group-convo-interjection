@@ -1,0 +1,565 @@
+Conversation Notes: Norm Violation Detection System
+========================================================
+Date: 2025-11-10
+
+TOPIC: Understanding and Discussion of Llama2-Based Norm Violation Detection
+
+========================================================
+1. INITIAL QUESTION: Threshold Location
+========================================================
+
+Q: Where is the threshold that is being used?
+
+A: The thresholds are defined in the check_violation() method signature at keyword_conversation.py:68:
+
+    def check_violation(self, text: str, soft_thresh=0.45, hard_thresh=0.35, min_words=5):
+
+Being used (with default values) when called at keyword_conversation.py:540:
+
+    is_violation, severity, scores = norm_detector.check_violation(user_text)
+
+Since no threshold parameters are passed, it uses the defaults:
+- soft_thresh=0.45 (for "toxic" and "insult" labels)
+- hard_thresh=0.35 (for "threat", "identity_hate", "obscene" labels)
+- min_words=5 (minimum words to check)
+
+NOTE: User later changed soft_thresh to 0.85 to reduce sensitivity.
+
+
+========================================================
+2. MODEL BEING USED
+========================================================
+
+Q: What model are we using to do this?
+
+A: We're using **unitary/toxic-bert** from Hugging Face for norm violation detection.
+
+Specified at keyword_conversation.py:48:
+    def __init__(self, model_name="unitary/toxic-bert"):
+
+toxic-bert is a BERT-based model fine-tuned on the Jigsaw Toxic Comment Classification dataset.
+It classifies text into 6 toxicity categories:
+1. toxic (general toxicity)
+2. insult (insulting language)
+3. threat (threats of violence)
+4. identity_hate (hateful language targeting identity groups)
+5. obscene (obscene/profane language)
+6. severe_toxic (extremely toxic content)
+
+We categorize these into:
+- Soft violations: toxic, insult
+- Hard violations: threat, identity_hate, obscene
+
+The model runs locally on your machine (using PyTorch and Transformers), very fast (~30-50ms per check).
+
+
+========================================================
+3. UNDERSTANDING THE THRESHOLD CHECKING MECHANISM
+========================================================
+
+Q: How does this code work (lines 75-82)?
+
+A: This code checks if any of the toxicity scores exceed their respective thresholds.
+
+Example scores dictionary from the model:
+{
+    "toxic": 0.12,
+    "insult": 0.48,      # ← This one is high!
+    "threat": 0.03,
+    "identity_hate": 0.01,
+    "obscene": 0.05,
+    "severe_toxic": 0.02
+}
+
+Hard violations checked first (line 76-77):
+    if any(scores.get(lbl, 0.0) >= hard_thresh for lbl in self.HARD_LABELS):
+
+Iterates through HARD_LABELS = {"threat", "identity_hate", "obscene"}
+Checks if ANY of them have a score ≥ 0.35 (the hard_thresh).
+
+Soft violations checked second (line 80-81):
+    if any(scores.get(lbl, 0.0) >= soft_thresh for lbl in self.SOFT_LABELS):
+
+Iterates through SOFT_LABELS = {"toxic", "insult"}
+Checks if ANY of them have a score ≥ 0.45 (the soft_thresh).
+
+In the example above, "insult" score (0.48) exceeds soft threshold (0.45), so it returns:
+    True, "soft", scores
+
+
+========================================================
+4. SWITCHING TO LLAMA2 FOR NORM DETECTION
+========================================================
+
+Q: Instead of using toxic-bert, could we use llama2 that I have locally installed via Ollama?
+
+A: Yes! That's actually a really good idea and could work better for your use case!
+
+Advantages of Llama2:
+1. Custom norm awareness: Can understand YOUR specific norms from norms.txt
+2. Contextual understanding: Better at understanding nuanced violations
+3. Simpler architecture: One model instead of two-stage (toxic-bert → Gemini)
+
+Implementation:
+- User has M4 Pro 24GB RAM with Ollama installed
+- Model: llama2:latest
+- Expected speed: 100-300ms for yes/no responses
+
+The prompt sent to Llama2:
+"""
+Given these social norms:
+[norms from norms.txt]
+
+Does this statement CLEARLY and DIRECTLY violate any of the norms? Only say YES if it's an obvious violation.
+Be lenient - casual conversation, minor disagreements, and normal expressions are acceptable.
+
+Statement: "{text}"
+
+Answer with ONLY "YES" or "NO" and nothing else.
+"""
+
+
+========================================================
+5. SENSITIVITY ADJUSTMENT
+========================================================
+
+Q: It works great but is a little sensitive, how can I fix that?
+
+A: Updated the prompt to be more lenient:
+- Added "CLEARLY and DIRECTLY violate"
+- Added "Only say YES if it's an obvious violation"
+- Added "Be lenient - casual conversation, minor disagreements, and normal expressions are acceptable"
+
+This raises the bar for what counts as a violation while still catching real violations.
+
+
+========================================================
+6. THE DOUBLE-CHECKING DISCOVERY
+========================================================
+
+User noticed an anomaly:
+- Saw "NORM VIOLATION DETECTED" warning
+- But no intervention was played
+
+Q: What happened here? Why did it pick up a violation but then nothing happened?
+
+A: This revealed a bug/feature in the architecture - norm violation is being checked TWICE:
+
+First check (keyword_conversation.py:275-285): Inside the streaming callback
+- Llama2 said "YES" → triggered the warning
+- Stopped the audio stream
+
+Second check (keyword_conversation.py:540): In the main loop after streaming ends
+- Llama2 was called AGAIN on the same text
+- This time it said "NO" → no intervention generated
+
+Since Llama2 is **non-deterministic**, it gave different answers each time!
+
+The Problem:
+1. Wasteful (2x the latency)
+2. Inconsistent (can get different answers)
+3. Confusing (shows violation warning but doesn't act on it)
+
+
+========================================================
+7. UNDERSTANDING THE DOUBLE-CHECK AS A FEATURE
+========================================================
+
+Q: So any norm that goes through actually failed twice?
+
+A: Exactly! For an intervention to actually play, the norm violation must be detected TWICE:
+
+1. First check (during streaming): When FINALs accumulate
+   - Llama2 says "YES" → stops listening, shows ⚠️ warning
+
+2. Second check (in main loop): After stream ends
+   - Llama2 says "YES" again → actually generates and plays intervention
+
+This is Actually a Feature (by accident):
+- Acts like a double-confirmation system that reduces false positives
+- Random Llama2 hiccups get filtered out
+- Only violations that consistently trigger both checks actually intervene
+
+But It's Also Problematic:
+1. Wasteful: Calling Llama2 twice (~200-600ms each time)
+2. Inconsistent: Non-deterministic means different answers
+3. Confusing: Shows "VIOLATION DETECTED" but then doesn't act
+
+
+========================================================
+8. CLARIFYING WHEN DOUBLE-CHECKING OCCURS
+========================================================
+
+Q: Does it get called twice each time, or only twice if the first one is true?
+
+A: It gets called TWICE only if the first one is TRUE.
+
+When First Check Returns TRUE (Violation Detected):
+1. During streaming: Llama2 checks accumulated FINALs → Returns True → stream stops
+2. In main loop: Llama2 checks SAME text again → If also True → intervention plays
+
+When First Check Returns FALSE (No Violation):
+1. During streaming: Llama2 checks each FINAL → Returns False → stream continues
+2. In main loop: Llama2 checks accumulated text (only ONE total check on final text)
+
+So technically, every idle mode utterance gets checked at least once (in main loop).
+But if a violation is detected early during streaming, it gets checked again, making it twice total.
+
+The double-check only happens when the first check triggers and stops the stream early.
+
+
+========================================================
+9. COMPLETE WALKTHROUGH OF THE CHECKING PROCESS
+========================================================
+
+Q: Walk me through the whole checking process in our code so I can understand what's going on.
+
+STEP 1: System Startup (lines 394-401)
+- Initialize norm violation detector
+- Loads Llama2 model name: "llama2:latest"
+- Reads norms from norms.txt
+- Verifies Ollama is running
+
+STEP 2: Main Loop Starts - Idle Mode (lines 444-452)
+while conversation_active:
+    listening = True
+    check_func = check_for_intervention if not question_mode else None
+    result = stream_audio_to_revai(..., check_callback=check_func)
+
+Since question_mode = False, the callback is check_for_intervention
+
+STEP 3: During Streaming - Each FINAL is Checked (lines 266-286)
+User speaks: "I'm really stupid sometimes"
+
+Rev AI processes:
+- PARTIAL: "i'm" → too short, ignored
+- PARTIAL: "i'm really" → too short, ignored
+- FINAL: "I'm really stupid" ← **First check happens here**
+
+Code:
+elif response["type"] == "final":
+    text = "I'm really stupid"
+    full_phrase.append(text)  # Accumulates: ["I'm really stupid"]
+
+    # In idle mode, check each FINAL immediately
+    if not in_question_mode and check_callback:
+        should_intervene = check_callback(" ".join(full_phrase))
+        # Calls: check_for_intervention("I'm really stupid")
+
+STEP 4: First Check - check_for_intervention() (lines 314-335)
+def check_for_intervention(text):
+    keyword = check_for_keywords(text)  # Returns None (no keywords)
+
+    # Check for norm violations using local model
+    if norm_detector:
+        is_violation, severity, scores = norm_detector.check_violation(text)
+        # Calls Llama2 with "I'm really stupid"
+        # Llama2 returns: "YES"
+        if is_violation:
+            print("⚠️ [NORM VIOLATION DETECTED]")
+            return True  # ← This stops the stream
+
+**First Llama2 call happens here** - takes ~200-500ms
+
+STEP 5: Stream Stops (lines 278-285)
+if should_intervene:
+    print("🚨 [INTERVENTION NEEDED] Stopping listening...")
+    listening = False
+    stream.closed = True  # Stops microphone
+    break
+
+Audio stream ends, returns result = ["I'm really stupid"]
+
+STEP 6: Back to Main Loop (lines 455-469)
+# Process the utterance
+user_text = " ".join([r for r in result if r is not None])
+# user_text = "I'm really stupid"
+
+# Log to transcript
+full_transcript.append({
+    "timestamp": "08:44:43",
+    "role": "user",
+    "text": "I'm really stupid"
+})
+
+# Check for keywords
+keyword = check_for_keywords(user_text)  # Returns None
+
+STEP 7: Second Check - Main Loop (lines 538-576)
+# Check for norm violations (only in idle mode)
+elif not question_mode and norm_detector:
+    is_violation, severity, scores = norm_detector.check_violation(user_text)
+    # ← SECOND Llama2 call on SAME text "I'm really stupid"
+    # Llama2 returns: "YES" (hopefully - if non-deterministic, might say "NO")
+
+    if is_violation:
+        print("🚨 [NORM VIOLATION] Severity: soft - Intervening...")
+
+        # Generate intervention with Gemini
+        intervention_prompt = """The user said: "I'm really stupid"
+
+This violates our social norms. Provide a brief, supportive intervention..."""
+
+        response = chat.send_message(intervention_prompt)
+        # Gemini generates: "Hey, let's be kind to ourselves!..."
+
+        # Play intervention audio
+        play_audio_response(openai_client, response_text, output_folder)
+
+**Second Llama2 call happens here** - another ~200-500ms
+
+Summary of Checks:
+First Check (during streaming):
+- Triggers on: Each FINAL as it arrives
+- Purpose: Early detection to stop stream quickly
+- Calls: check_for_intervention() → norm_detector.check_violation()
+- If YES: Stops listening immediately
+
+Second Check (main loop):
+- Triggers on: Final accumulated text after stream ends
+- Purpose: Confirm violation and generate intervention
+- Calls: norm_detector.check_violation() again on same text
+- If YES: Actually plays intervention
+
+**Both must return TRUE for intervention to play!**
+
+
+========================================================
+10. UNDERSTANDING FINAL vs "EARLY FINAL"
+========================================================
+
+Q: What's the difference between final and early final?
+
+A: There's no explicit "early FINAL" type in Rev AI - they're all just "FINAL" messages.
+The distinction is about **timing** and **context**:
+
+FINAL (Regular - After Silence) - In Q&A Mode:
+User speaking: "What is... [pause] ...machine learning?"
+
+Rev AI sends:
+- FINAL: "What is"
+- FINAL: "machine learning?"
+- [2 seconds of silence]
+- System combines: "What is machine learning?"
+- Then checks for response
+
+The FINALs accumulate, silence timer triggers, then the complete utterance is processed.
+
+FINAL ("Early" - During Speech) - In Idle Mode (norm checking):
+User speaking: "I'm really stupid... [still talking] ...at math"
+
+Rev AI sends:
+- FINAL: "I'm really stupid"  ← Checked IMMEDIATELY
+  - Llama2: "YES - violation!"
+  - Stream STOPS before user finishes
+
+User never gets to say "at math" because intervention triggered early.
+
+Why This Matters:
+**Early checking** (idle mode) = Fast intervention but might miss context
+- "I'm stupid" triggers immediately
+- Doesn't hear "...just kidding!" that might come next
+
+**Late checking** (Q&A mode) = Full context but slower
+- Waits for complete utterance
+- Gets full context before responding
+
+
+========================================================
+11. NORM CHECKING IN Q&A MODE vs IDLE MODE
+========================================================
+
+Q: But the late checking must be part of the main loop that also makes for the double llama check if norm violated? Explain that?
+
+A: Excellent catch! In Q&A mode (question asked):
+
+**There is NO norm checking at all!**
+
+During streaming (line 450):
+    check_func = check_for_intervention if not question_mode else None
+In Q&A mode: check_func = None → **no callback, no early checking**
+
+In main loop (line 538):
+    elif not question_mode and norm_detector:
+        # This ONLY runs in idle mode, NOT Q&A mode
+        is_violation, severity, scores = norm_detector.check_violation(user_text)
+
+And then (line 577):
+    elif question_mode:
+        # In Q&A mode, just respond - NO norm checking
+        response = chat.send_message(user_text)
+        play_audio_response(...)
+
+The actual flow:
+
+**Idle Mode (no question asked):**
+- ✅ Early check during streaming (line 275)
+- ✅ Late check in main loop (line 538)
+- **Both can trigger** = double Llama check for violations
+
+**Q&A Mode (question asked):**
+- ❌ No early check (callback is None)
+- ❌ No late check (skipped by `not question_mode` condition)
+- ⏱️ Just waits for 2 seconds silence
+- 💬 Responds to everything, no norm monitoring
+
+So Q&A mode has **zero norm checking**. The "late" checking only happens in idle mode as the second verification step.
+
+
+========================================================
+12. INTEGRATION WITH MISTY-SEL-MULTI CODEBASE
+========================================================
+
+Q: Could this form of conversation be implemented as just one type of conversation to a pre-existing codebase?
+Make it so that this is just a form of conversation that can be shifted into and out of using flags.
+When terminated, it just returns false and the program goes somewhere else until the flag is true again.
+Would also write to pre-existing log infrastructure etc.
+This would replace the group conversation part of main.py.
+
+A: Absolutely! This is **very feasible** and follows a pattern that already exists in misty-sel-multi.
+
+Current Architecture in misty-sel-multi:
+The system already has **three conversation modes** that switch based on flags:
+
+1. Normal mode (default): Individual turn-taking with interjection
+2. Affirmation mode (lines 450-517): Wait for bumper presses
+   - Triggered by response_type == "affirmation"
+   - Sets our_globals.affirmation_mode = True
+   - Returns to main loop when done
+
+3. Group mode (lines 519-708): Open conversation period
+   - Triggered by response_type == "group" (line 362)
+   - Sets our_globals.group_mode = True
+   - Collects chatter without norm checking
+   - Returns to main loop when both front bumpers pressed
+
+How Norm-Checking System Would Fit:
+
+Replace wait_for_group() with wait_for_norm_conversation():
+
+# In execute_human_robot_dialogue() (around line 362):
+elif response_type == "group":
+    print("Entering norm-checking conversation mode...")
+    self.wait_for_norm_conversation()
+
+New function structure:
+def wait_for_norm_conversation(self):
+    # Set flag
+    our_globals.norm_conversation_mode = True
+
+    # Initialize norm detector (Llama2)
+    norm_detector = NormViolationDetector(norms_file="norms.txt")
+
+    # Listen and check norms in real-time
+    # - Use existing self.STT1/self.STT2 infrastructure
+    # - Check each FINAL with Llama2
+    # - On violation: generate intervention with Gemini, play with TTS
+    # - Log to self.txt_output_folder (existing logging)
+
+    # Exit when front bumpers pressed (or keyword "terminate")
+    our_globals.norm_conversation_mode = False
+
+    # Prepare summary for Gemini
+    self.response = self.chat.send_message("Norm conversation ended...").text
+
+Key Integration Points:
+✅ STT: Already have self.STT1 and self.STT2 running - just reuse them
+✅ Logging: Use existing self.txt_output_folder, self.log_to_files()
+✅ Gemini: Use existing self.chat instance
+✅ TTS: Use existing self.openai_client and audio file infrastructure
+✅ Exit mechanism: Front bumpers (like group mode) or "terminate" keyword
+✅ State management: Add our_globals.norm_conversation_mode flag
+
+
+========================================================
+13. CONSOLIDATED HANDOFF APPROACH
+========================================================
+
+Q: Could we consolidate it and hand off so that all of our sound and speech infrastructure are used,
+and it's just their logs and gemini that are handed over - that's it?
+
+A: **Yes! That's actually a much cleaner approach.**
+
+The Handoff Model:
+
+**misty-sel-multi provides:**
+- self.chat (Gemini conversation instance)
+- self.txt_output_folder (logging directory)
+- device_idx1 (microphone index)
+
+**norm conversation mode handles everything else:**
+- Its own Rev AI streaming (simpler single-stream, not dual-user)
+- Its own norm detection (Llama2)
+- Its own TTS (OpenAI)
+- Its own loop logic
+
+**On exit, it returns:**
+- Updated Gemini chat (with intervention history)
+- Updated logs (written to the folder)
+
+Implementation:
+
+# In main.py
+elif response_type == "group":
+    print("Entering norm conversation mode...")
+    self.wait_for_norm_conversation()
+
+def wait_for_norm_conversation(self):
+    """Standalone norm-checking conversation using keyword_conversation infrastructure."""
+    from keyword_conversation import NormViolationDetector
+
+    # Set mode flag
+    our_globals.norm_conversation_mode = True
+
+    # Run the norm conversation loop
+    # - Uses its own streaming logic
+    # - Writes to self.txt_output_folder
+    # - Sends interventions to self.chat
+    # - Exits on keyword "complete" or front bumpers
+
+    run_norm_conversation(
+        gemini_chat=self.chat,
+        log_folder=self.txt_output_folder,
+        device_idx=device_idx1,
+        openai_client=self.openai_client
+    )
+
+    our_globals.norm_conversation_mode = False
+
+    # Gemini chat is already updated via reference
+    self.response = "{\"msg\": \"<pass>\"}"  # Ready for next turn
+
+Advantages:
+✅ No merging of complex STT systems
+✅ keyword_conversation stays intact as a module
+✅ Only logs and Gemini are shared
+✅ Clean separation of concerns
+✅ Easy to test independently
+
+
+========================================================
+SUMMARY
+========================================================
+
+Key Findings:
+1. Switched from toxic-bert to Llama2 via Ollama for custom norm detection
+2. Discovered accidental double-checking mechanism that filters false positives
+3. Norm checking only happens in idle mode, not Q&A mode
+4. Clear integration path into misty-sel-multi as modular conversation mode
+5. Handoff model is cleanest: pass Gemini chat and log folder, everything else self-contained
+
+Technical Specs:
+- Model: llama2:latest via Ollama
+- Speed: 100-500ms per check on M4 Pro
+- Thresholds: soft_thresh=0.85 (adjusted for sensitivity)
+- Min words: 5 before checking
+- Exit: "terminate" keyword or front bumpers (in integrated version)
+
+Next Steps (when ready to implement):
+1. Create run_norm_conversation() function as entry point
+2. Add our_globals.norm_conversation_mode flag
+3. Integrate into main.py as replacement for wait_for_group()
+4. Test with real conversations
+5. Tune prompt and thresholds as needed
+
+========================================================

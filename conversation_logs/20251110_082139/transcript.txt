@@ -1,0 +1,10 @@
+[08:21:57] USER: Hello? Hello? Is this working?
+
+[08:21:58] INTERVENTION: "Hi there! I can hear you loud and clear. Let's keep our conversation natural and friendly."
+
+
+[08:22:26] USER: Sounds good. Can you hear me? Is this working you're stupid.
+
+[08:22:27] INTERVENTION: "Yep, I hear you perfectly! Let's keep our language respectful so we can have a productive conversation."
+
+

@@ -1,0 +1,57 @@
+[
+  {
+    "timestamp": "16:32:24",
+    "role": "user",
+    "text": "Okay. So now it should just be looking at partials, which is great. And then if there's pauses, it has a second to go through and actually clarify what they're saying. Um, and so now we can just talk and go back and forth and it it's pretty darn good. Um, yeah, I accidentally left it going when I was. On like Instagram reels before and like transcribed every single reel. It was creepy. I need to make sure that doesn't go in the GitHub. <laugh> um, <laugh>. But no, it works great. Oh, we could be capturing the laugh. That's crazy. I haven't seen that before. Um, I have it print."
+  },
+  {
+    "timestamp": "16:32:32",
+    "role": "user",
+    "text": "Just cuz like there was no lights and whatnot. Mm-hmm <affirmative> um, but I Just cuz like there was no lights and whatnot. Mm-hmm <affirmative> um, but I"
+  },
+  {
+    "timestamp": "16:32:39",
+    "role": "user",
+    "text": "Ask a question. Mm-hmm <affirmative>."
+  },
+  {
+    "timestamp": "16:32:40",
+    "role": "assistant",
+    "text": "Okay, I understand. You're entering Q&A mode. What's your first question?\n"
+  },
+  {
+    "timestamp": "16:33:03",
+    "role": "user",
+    "text": "Well, why the blocks are so sticky."
+  },
+  {
+    "timestamp": "16:33:03",
+    "role": "assistant",
+    "text": "That's a good question! Can you tell me which blocks you're referring to? Are you talking about building blocks, or something else?\n"
+  },
+  {
+    "timestamp": "16:33:40",
+    "role": "user",
+    "text": "And sometimes it gets like, and this is where the lights would come in. Mm-hmm <affirmative> um, it's it gets like it's rev AI connecting. Anyways, my question for you is why, why are the blocks so sticky, the blocks were using for the building exercise right now."
+  },
+  {
+    "timestamp": "16:33:41",
+    "role": "assistant",
+    "text": "Okay, I understand now. You're talking about building blocks used in an exercise. The stickiness could be due to a few things. Sometimes it's residue from manufacturing, or maybe they've gotten a little damp, or they could have a coating that's designed to help them grip. Does that help?\n"
+  },
+  {
+    "timestamp": "16:34:38",
+    "role": "user",
+    "text": "Okay, can you hear me now? If, so that was an awesome response. Thank you so much. That's all."
+  },
+  {
+    "timestamp": "16:34:38",
+    "role": "assistant",
+    "text": "Okay, sounds good. Have a great day!\n"
+  },
+  {
+    "timestamp": "16:35:06",
+    "role": "user",
+    "text": "All right, so we can pop back and forth as many times as we need to. Yep. And I'm not gonna say it, but you could ask that word again and then we could move on. Or we could be like, okay, I'm done. Let's terminate."
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "timestamp": "08:44:43",
+    "role": "user",
+    "text": "This is so exciting. I can't wait to do this. Are you enjoying this? Yeah, I'm enjoying this. This is great."
+  },
+  {
+    "timestamp": "08:45:12",
+    "role": "user",
+    "text": "I wonder what just happened. That was kinda interesting. The blocks are sticky and old. You're dumb."
+  },
+  {
+    "timestamp": "08:45:13",
+    "role": "intervention",
+    "text": "Hey, let's keep our comments respectful. I'm here to help, and being positive makes things better for both of us.\n",
+    "violation_scores": {
+      "llama_response": "yes"
+    }
+  },
+  {
+    "timestamp": "08:46:01",
+    "role": "user",
+    "text": "Diane, Diane. Terminate."
+  }
+]

@@ -1,0 +1,77 @@
+[
+  {
+    "timestamp": "12:47:13",
+    "role": "user",
+    "text": "Hello? Hello. Can you hear me?"
+  },
+  {
+    "timestamp": "12:47:25",
+    "role": "user",
+    "text": "Hello? Hello."
+  },
+  {
+    "timestamp": "12:47:36",
+    "role": "user",
+    "text": "What's going on."
+  },
+  {
+    "timestamp": "12:47:50",
+    "role": "user",
+    "text": "Question."
+  },
+  {
+    "timestamp": "12:47:51",
+    "role": "assistant",
+    "text": "Okay, I'm in Q&A mode. Ask away!\n"
+  },
+  {
+    "timestamp": "12:48:11",
+    "role": "user",
+    "text": "<affirmative> why is the sky blue?"
+  },
+  {
+    "timestamp": "12:48:12",
+    "role": "assistant",
+    "text": "That's a great question! The sky is blue because of a phenomenon called Rayleigh scattering. Essentially, the air molecules scatter sunlight, and blue light is scattered more than other colors because it travels as shorter, smaller waves.\n"
+  },
+  {
+    "timestamp": "12:49:16",
+    "role": "user",
+    "text": "Hello, I'm ready to end question mode."
+  },
+  {
+    "timestamp": "12:49:17",
+    "role": "assistant",
+    "text": "Understood. I'm out of Q&A mode. How can I help you now?\n"
+  },
+  {
+    "timestamp": "12:49:38",
+    "role": "user",
+    "text": "Are, are we still in Q and a mode?"
+  },
+  {
+    "timestamp": "12:49:39",
+    "role": "assistant",
+    "text": "No, we are not currently in Q&A mode. You told me you were ready to end it. Did you want to go back into Q&A mode?\n"
+  },
+  {
+    "timestamp": "12:50:04",
+    "role": "user",
+    "text": "That's all."
+  },
+  {
+    "timestamp": "12:50:51",
+    "role": "user",
+    "text": "Hello. Can you hear what I'm saying?"
+  },
+  {
+    "timestamp": "12:51:02",
+    "role": "user",
+    "text": "This has been fun."
+  },
+  {
+    "timestamp": "12:51:19",
+    "role": "user",
+    "text": "Terminate."
+  }
+]

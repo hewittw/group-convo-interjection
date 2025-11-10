@@ -1,0 +1,34 @@
+[12:47:13] USER: Hello? Hello. Can you hear me?
+
+[12:47:25] USER: Hello? Hello.
+
+[12:47:36] USER: What's going on.
+
+[12:47:50] USER: Question.
+
+[12:47:51] ASSISTANT: Okay, I'm in Q&A mode. Ask away!
+
+
+[12:48:11] USER: <affirmative> why is the sky blue?
+
+[12:48:12] ASSISTANT: That's a great question! The sky is blue because of a phenomenon called Rayleigh scattering. Essentially, the air molecules scatter sunlight, and blue light is scattered more than other colors because it travels as shorter, smaller waves.
+
+
+[12:49:16] USER: Hello, I'm ready to end question mode.
+
+[12:49:17] ASSISTANT: Understood. I'm out of Q&A mode. How can I help you now?
+
+
+[12:49:38] USER: Are, are we still in Q and a mode?
+
+[12:49:39] ASSISTANT: No, we are not currently in Q&A mode. You told me you were ready to end it. Did you want to go back into Q&A mode?
+
+
+[12:50:04] USER: That's all.
+
+[12:50:51] USER: Hello. Can you hear what I'm saying?
+
+[12:51:02] USER: This has been fun.
+
+[12:51:19] USER: Terminate.
+
