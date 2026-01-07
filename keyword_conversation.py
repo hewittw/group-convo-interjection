@@ -12,7 +12,6 @@ import queue
 import threading
 import pyaudio
 import subprocess
-import numpy as np
 from datetime import datetime
 from pathlib import Path
 
@@ -22,9 +21,6 @@ import google.generativeai as genai
 from openai import OpenAI
 from dotenv import load_dotenv
 from mutagen.mp3 import MP3
-from faster_whisper import WhisperModel
-import wave
-
 # Norm violation detection with Ollama
 import subprocess
 
@@ -39,9 +35,15 @@ full_transcript = []
 current_utterance = []
 silence_time = time.time()
 transcribing = False
+should_process_transcriptions = True  # Controls whether to act on Rev AI transcriptions
 
 # Global norm violation detector (loaded once at startup)
 norm_detector = None
+
+# Utterance collection
+current_full_phrase = []
+utterance_ready = threading.Event()
+utterance_lock = threading.Lock()
 
 
 class NormViolationDetector:
@@ -325,180 +327,104 @@ def stream_audio_to_revai(device_idx, output_folder, revai_api_key, revai_config
     return result
 
 
-def stream_audio_to_whisper(whisper_model, device_idx, output_folder, in_question_mode=False, check_callback=None):
-    """Stream audio from microphone with real-time Whisper transcription.
+def persistent_revai_stream(device_idx, output_folder, revai_api_key, revai_config, check_callback=None):
+    """Persistent Rev AI streaming - keeps WebSocket open for entire conversation.
 
-    Args:
-        whisper_model: Pre-loaded WhisperModel instance
-        device_idx: Microphone device index
-        output_folder: Path to save audio logs
-        in_question_mode: Whether we're in Q&A mode (wait for silence)
-        check_callback: Optional function to call with each PARTIAL transcription in idle mode
+    Runs in background thread, processes transcriptions based on global flags.
     """
-    global silence_time, transcribing, listening
+    global silence_time, transcribing, conversation_active, should_process_transcriptions
+    global question_mode, current_full_phrase, utterance_ready, listening
 
-    rate = 16000  # Whisper uses 16kHz
-    chunk = int(rate / 10)  # 100ms chunks
+    rate = 44100
+    chunk = int(rate / 10)
 
-    result = []
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    audio_log_path = output_folder / f"audio_{timestamp}.wav"
+    print("🔌 [REV AI] Starting persistent streaming connection...")
 
-    print("🎤 [WHISPER] Starting streaming transcription...")
+    # Create ONE Rev AI client for entire conversation
+    streamclient = RevAiStreamingClient(revai_api_key, revai_config)
 
-    # Open microphone
-    p = pyaudio.PyAudio()
-    stream = p.open(
-        format=pyaudio.paInt16,
-        channels=1,
-        rate=rate,
-        input=True,
-        frames_per_buffer=chunk,
-        input_device_index=device_idx,
-    )
+    with SimpleMicrophoneStream(rate, chunk, device_idx) as stream:
+        try:
+            # Start FFmpeg for audio logging (one per session)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            audio_log_path = output_folder / f"session_{timestamp}.mp3"
 
-    print("   ✓ Microphone opened")
-    print("🎤 [LISTENING] Speak now...")
+            ffmpeg_process = subprocess.Popen([
+                "ffmpeg", "-f", "s16le", "-ar", str(rate), "-ac", "1",
+                "-i", "pipe:0", "-y", "-codec:a", "libmp3lame",
+                "-b:a", "192k", str(audio_log_path)
+            ], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    frames = []
-    last_speech_time = time.time()
-    speech_detected = False
-    last_transcription = ""
-    transcription_counter = 0
+            # Start Rev AI streaming - ONE connection for whole conversation
+            print("   ⏳ Connecting to Rev AI servers...")
+            response_gen = streamclient.start(stream.generator(ffmpeg_process.stdin))
+            print("✅ [CONNECTED] Rev AI WebSocket open - ready for entire conversation")
 
-    # How often to run transcription (in chunks - 10 chunks = 1 second)
-    transcribe_interval = 10  # Transcribe every 1 second
+            silence_time = time.time()
 
-    try:
-        # Record audio with streaming transcription
-        while listening and conversation_active:
-            data = stream.read(chunk, exception_on_overflow=False)
-            frames.append(data)
-            transcription_counter += 1
-
-            # Simple voice activity detection
-            audio_data = np.frombuffer(data, dtype=np.int16)
-            energy = np.abs(audio_data).mean()
-
-            if energy > 500:  # Threshold for speech detection
-                if not speech_detected:
-                    print("🎙️  [SPEECH DETECTED] Recording...")
-                    speech_detected = True
-                last_speech_time = time.time()
-                transcribing = True
-            else:
-                transcribing = False
-
-            # Perform incremental transcription every N chunks (streaming partials)
-            if speech_detected and transcription_counter >= transcribe_interval and len(frames) > 0:
-                transcription_counter = 0
-
-                # Save current audio to temp file
-                temp_path = output_folder / f"temp_{timestamp}.wav"
-                with wave.open(str(temp_path), 'wb') as wf:
-                    wf.setnchannels(1)
-                    wf.setsampwidth(p.get_sample_size(pyaudio.paInt16))
-                    wf.setframerate(rate)
-                    wf.writeframes(b''.join(frames))
-
-                # Transcribe incrementally
-                try:
-                    segments, _ = whisper_model.transcribe(
-                        str(temp_path),
-                        language="en",
-                        vad_filter=True,
-                        beam_size=5,
-                        condition_on_previous_text=True,
-                    )
-
-                    # Collect partial text
-                    partial_text = ""
-                    for segment in segments:
-                        partial_text += segment.text.strip() + " "
-
-                    partial_text = partial_text.strip()
-
-                    # Only print if different from last transcription
-                    if partial_text and partial_text != last_transcription:
-                        print(f"📝 [PARTIAL] {partial_text}")
-                        last_transcription = partial_text
-
-                        # In idle mode, check partials for intervention (like Rev AI)
-                        if not in_question_mode and check_callback:
-                            if check_callback(partial_text):
-                                print("🚨 [INTERVENTION TRIGGER] Stopping...")
-                                listening = False
-                                temp_path.unlink(missing_ok=True)
-                                break
-
-                    # Clean up temp file
-                    temp_path.unlink(missing_ok=True)
-
-                except Exception as e:
-                    print(f"⚠️  Partial transcription error: {e}")
-                    temp_path.unlink(missing_ok=True)
-
-            # Check for silence timeout
-            if speech_detected:
-                silence_duration = time.time() - last_speech_time
-
-                # In Q&A mode: stop after 2 seconds of silence
-                # In idle mode: stop after 1.5 seconds of silence
-                threshold = 2.0 if in_question_mode else 1.5
-
-                if silence_duration > threshold:
-                    print("🤫 [SILENCE DETECTED] Finalizing...")
+            # Process responses continuously
+            first_partial = True
+            for raw_response in response_gen:
+                if not conversation_active:
                     break
 
-            # Timeout if no speech detected after 10 seconds
-            if not speech_detected and time.time() - last_speech_time > 10:
-                print("⏱️  [TIMEOUT] No speech detected")
-                break
+                response = json.loads(raw_response)
 
-        # Close stream
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+                if response["type"] == "partial":
+                    transcribing = True
+                    silence_time = time.time()
+                    text = "".join(e["value"] for e in response["elements"])
 
-        if not frames or not speech_detected:
-            print("⚠️  [NO SPEECH] No audio recorded")
-            return []
+                    if text.strip() and should_process_transcriptions:
+                        if first_partial:
+                            print("🎙️  [SPEECH DETECTED] Processing audio...")
+                            first_partial = False
+                        print(f"📝 [TRANSCRIBING] {text}")
 
-        # Save final audio
-        with wave.open(str(audio_log_path), 'wb') as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(p.get_sample_size(pyaudio.paInt16))
-            wf.setframerate(rate)
-            wf.writeframes(b''.join(frames))
+                elif response["type"] == "final":
+                    silence_time = time.time()
+                    text = "".join(e["value"] for e in response["elements"])
 
-        print("   ✓ Audio saved")
+                    if text.strip() and should_process_transcriptions:
+                        print(f"✅ [FINAL] {text}")
 
-        # Final transcription for accuracy
-        print("🧠 [WHISPER] Final transcription...")
-        segments, _ = whisper_model.transcribe(
-            str(audio_log_path),
-            language="en",
-            vad_filter=True,
-            beam_size=5,
-        )
+                        with utterance_lock:
+                            current_full_phrase.append(text)
 
-        # Collect final text
-        final_text = ""
-        for segment in segments:
-            final_text += segment.text.strip() + " "
+                        # In idle mode, check each FINAL immediately
+                        if not question_mode and check_callback:
+                            combined_text = " ".join(current_full_phrase)
+                            if check_callback(combined_text):
+                                print("🚨 [INTERVENTION TRIGGER] Utterance complete")
+                                # Signal utterance is ready
+                                utterance_ready.set()
+                                # Wait for main thread to process
+                                time.sleep(0.5)
+                                # Reset for next utterance
+                                with utterance_lock:
+                                    current_full_phrase.clear()
+                                first_partial = True
 
-        final_text = final_text.strip()
+                        # In Q&A mode, check for silence timeout
+                        elif question_mode:
+                            # Monitor silence in separate thread (handled by monitor_silence)
+                            pass
 
-        if final_text:
-            print(f"✅ [FINAL] {final_text}")
-            result.append(final_text)
+                    transcribing = False
 
-    except Exception as e:
-        print(f"❌ [ERROR] Whisper streaming: {e}")
-        import traceback
-        traceback.print_exc()
-
-    return result
+        except Exception as e:
+            print(f"❌ [ERROR] Persistent Rev AI streaming: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Cleanup
+            if ffmpeg_process:
+                try:
+                    ffmpeg_process.stdin.close()
+                    ffmpeg_process.wait(timeout=2)
+                except:
+                    pass
+            print("🔌 [DISCONNECTED] Rev AI WebSocket closed")
 
 
 def check_for_keywords(text):
@@ -580,7 +506,7 @@ def play_audio_response(openai_client, response_text, output_folder):
 
 
 def main():
-    global conversation_active, listening, question_mode, full_transcript, norm_detector
+    global conversation_active, listening, question_mode, full_transcript, norm_detector, should_process_transcriptions
 
     print("\n=== Keyword-Triggered Conversation System ===")
     print("Keywords:")
@@ -610,11 +536,12 @@ def main():
     # Initialize APIs
     print("Initializing APIs...")
 
-    # Whisper (local STT)
-    print("📦 Loading Whisper model...")
-    print("   (First run will download ~244MB model file)")
-    whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
-    print("   ✓ Whisper model loaded (small)")
+    # Rev AI
+    revai_api_key = os.getenv("REVAI_API_KEY")
+    if not revai_api_key:
+        print("ERROR: REVAI_API_KEY not found in environment")
+        return
+    revai_config = MediaConfig('audio/x-raw', 'interleaved', 44100, 'S16LE', 1)
 
     # Gemini
     google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -644,21 +571,36 @@ The conversation will end when the user says "terminate"."""
     openai_client = OpenAI(api_key=openai_api_key)
 
     print("✓ All APIs initialized\n")
+
+    # Start persistent Rev AI streaming in background
+    check_func = check_for_intervention
+    streaming_thread = threading.Thread(
+        target=persistent_revai_stream,
+        args=(device_idx, output_folder, revai_api_key, revai_config, check_func),
+        daemon=True
+    )
+    streaming_thread.start()
+    time.sleep(2)  # Give Rev AI time to connect
+
     print("🎤 Listening... (say 'question' to enter Q&A mode, 'terminate' to finish)\n")
 
     # Main conversation loop
     try:
         while conversation_active:
             print("=" * 70)
-            # Start listening for user input
+            # Enable transcription processing
+            should_process_transcriptions = True
             listening = True
-            # In idle mode, check each FINAL for keywords/norms. In Q&A mode, wait for silence.
-            check_func = check_for_intervention if not question_mode else None
-            result = stream_audio_to_whisper(whisper_model, device_idx, output_folder,
-                                            in_question_mode=question_mode, check_callback=check_func)
 
-            # Process the utterance
-            user_text = " ".join([r for r in result if r is not None])
+            # Wait for utterance from Rev AI stream
+            utterance_ready.wait(timeout=30)
+
+            # Get the utterance
+            with utterance_lock:
+                user_text = " ".join(current_full_phrase).strip()
+                current_full_phrase.clear()
+
+            utterance_ready.clear()
 
             if not user_text.strip():
                 print("⚠️  [NO SPEECH DETECTED] No transcription received, listening again...\n")
@@ -703,7 +645,8 @@ The conversation will end when the user says "terminate"."""
                     })
 
                     # Play audio response
-                    listening = False  # Don't record while speaking
+                    should_process_transcriptions = False  # Ignore transcriptions while AI speaks
+                    listening = False
                     play_audio_response(openai_client, response_text, output_folder)
                     time.sleep(0.2)  # Small buffer to let things settle
                     print("⏭️  [READY] Preparing to listen again...\n")
@@ -730,6 +673,7 @@ The conversation will end when the user says "terminate"."""
                     })
 
                     # Play goodbye audio
+                    should_process_transcriptions = False  # Ignore transcriptions while AI speaks
                     listening = False
                     play_audio_response(openai_client, response_text, output_folder)
                     time.sleep(0.2)  # Small buffer to let things settle
@@ -772,6 +716,7 @@ Keep it under 2 sentences and conversational since it will be spoken aloud."""
                         })
 
                         # Play intervention audio
+                        should_process_transcriptions = False  # Ignore transcriptions while AI speaks
                         listening = False
                         play_audio_response(openai_client, response_text, output_folder)
                         time.sleep(0.2)  # Small buffer to let things settle
@@ -799,7 +744,8 @@ Keep it under 2 sentences and conversational since it will be spoken aloud."""
                     })
 
                     # Play audio response
-                    listening = False  # Don't record while speaking
+                    should_process_transcriptions = False  # Ignore transcriptions while AI speaks
+                    listening = False
                     play_audio_response(openai_client, response_text, output_folder)
                     time.sleep(0.2)  # Small buffer to let things settle
                     print("⏭️  [READY] Preparing to listen again...\n")
