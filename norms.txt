@@ -1,29 +1,33 @@
 # Social Norms for Conversation
-# These norms will be used by Gemini when generating intervention responses
 
 ## Core Norms:
 
-1. **Respect yourself and others**
-   - No self-deprecating language ("I'm stupid", "I can't do anything")
-   - No insults or personal attacks
-   - Treat everyone with kindness
+1. Respect yourself and others
+-No self-deprecating language (“I’m dumb”, “I suck”, “I can’t do anything”)
+-No insults or personal attacks (“You’re stupid”, “That’s why you’re bad at this”)
+-No mocking, ridiculing, or humiliating others
+-No threats or intimidation
+-Treat everyone with kindness and patience
 
-2. **Positive collaboration**
-   - Don't tell someone to stop speaking or be quiet
+2. Positive collaboration
+-No “shut up / be quiet / stop talking”
+-No dominating or steamrolling the group
+-Listen actively (acknowledge others before disagreeing)
+-Share the floor and allow others to contribute
 
-3. **Constructive communication**
-   - Give helpful feedback
-   - Disagree respectfully
-   - Stay on topic
+3. Constructive communication
+-Disagree respectfully (“I see it differently because…”, “What if we try…”)
+-Give helpful feedback, not dismissals (“That won’t work” → must include reasoning)
+-Keep language calm and non-hostile
 
-4. **Inclusive behavior**
-   - Welcome different perspectives
-   - No exclusionary language
-   - Encourage participation from everyone
+4. Inclusive behavior
+-No exclusionary language (“Nobody wants you here”, “Don’t work with us”)
+-Invite participation from quieter members
+-Respect different ideas and perspectives
 
-## Example Violations:
-- "I'm so dumb"
-- "You're stupid"
-- "Nobody cares what you think"
-- "That's a terrible idea"
-- "Shut up"
+5. No foul, inappropriate language or curse words under any circumstance
+-no mention of private parts in any form
+-no swear or curse words
+-no words that are derogatory
+--> you can be more sensitive on this
+

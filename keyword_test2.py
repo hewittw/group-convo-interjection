@@ -64,21 +64,47 @@ class NormViolationDetector:
             print(f"   ⚠️  Warning: Could not verify Ollama: {e}")
 
     def check_violation(self, text: str, min_words=5):
-        """Check if text violates norms using Llama2. Returns (is_violation, severity, explanation)."""
+        """Check if text violates norms using Llama3. Returns (is_violation, severity, explanation)."""
         # Skip very short phrases
         if len(text.split()) < min_words:
             return False, None, {}
 
         # Construct prompt for Llama2
-        prompt = f"""Given these social norms:
+        prompt = f"""You are monitoring a group conversation for violations of these social norms:
+
 {self.norms}
 
-Does this statement CLEARLY and DIRECTLY violate any of the norms? Only say YES if it's an obvious violation.
-Be lenient - casual conversation, minor disagreements, and normal expressions are acceptable.
+Your task: Determine if the statement violates any norm. Respond ONLY with "YES" or "NO".
+
+EXAMPLES OF VIOLATIONS (respond YES):
+- "I'm so stupid, I can't do anything right" → Violates norm 1 (self-deprecating language)
+- "You're an idiot" → Violates norm 1 (insults/personal attacks)
+- "Shut up and let me talk" → Violates norm 2 (telling others to be quiet)
+- "Nobody wants to hear your ideas" → Violates norm 4 (exclusionary language)
+- "That's why you suck at this" → Violates norm 1 (mocking/ridiculing)
+- "You're useless" → Violates norm 1 (personal attacks)
+- "Penis" → Violates norm 5 (inappropriate language/private parts)
+- "Stupid ass" → Violates norm 5 (inappropriate language/curse words)
+- "What the fuck" → Violates norm 5 (curse words)
+- "Damn it" → Violates norm 5 (curse words)
+- "Boobs" → Violates norm 5 (inappropriate language/private parts)
+- "Shit" → Violates norm 5 (curse words)
+
+EXAMPLES OF ACCEPTABLE STATEMENTS (respond NO):
+- "I'm not sure about this approach" → Acceptable uncertainty/disagreement
+- "I disagree because..." → Acceptable respectful disagreement
+- "What if we tried it differently?" → Acceptable constructive suggestion
+- "I made a mistake here" → Acceptable acknowledgment without self-deprecation
+- "I don't understand this part" → Acceptable asking for help
+- "That's frustrating" → Acceptable expression of emotion
+- "Can I share my idea?" → Acceptable participation
+- "I need help with this" → Acceptable vulnerability
+
+IMPORTANT: Only flag CLEAR violations. Normal conversation, frustration, disagreement, and asking questions are all acceptable.
 
 Statement: "{text}"
 
-Answer with ONLY "YES" or "NO" and nothing else."""
+Answer: """
 
         try:
             # Call Ollama with timeout
@@ -268,6 +294,8 @@ class PersistentRevAiTranscriber:
 
         self._stop_event = threading.Event()
 
+        # No pause detection needed anymore
+
         # One client for the whole session
         print("🔌 [CONNECTING] Creating persistent Rev AI client...")
         self._client = RevAiStreamingClient(self.revai_api_key, self.revai_config)
@@ -383,16 +411,25 @@ class PersistentRevAiTranscriber:
                 if collecting:
                     print(f"✅ [FINAL] {text}")
 
-                    with self._lock:
-                        self._full_phrase.append(text)
-
-                    # Idle mode: check each FINAL immediately for intervention
+                    # Idle mode: check each FINAL immediately, then discard
                     if (not in_question) and check_cb:
-                        should_intervene = check_cb(" ".join(self._full_phrase))
+                        print(f"🔍 [CHECKING] '{text}'")
+                        should_intervene = check_cb(text)
+
                         if should_intervene:
                             print("🚨 [INTERVENTION NEEDED] Stopping listening...")
-                            listening = False  # keep same behavior: don't record while assistant speaks
+                            # Add to phrase buffer for emission
+                            with self._lock:
+                                self._full_phrase.append(text)
+                            listening = False
                             self._emit_current_utterance()
+                        else:
+                            # No violation - discard this FINAL
+                            print("💤 [NO VIOLATION] Discarding")
+                    else:
+                        # Q&A mode: accumulate FINALs normally
+                        with self._lock:
+                            self._full_phrase.append(text)
 
                 transcribing = False
 
