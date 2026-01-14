@@ -38,7 +38,7 @@ norm_detector = None
 class NormViolationDetector:
     """Local Llama2 model for detecting norm violations using Ollama."""
 
-    def __init__(self, model_name="llama2:latest", norms_file="norms.txt"):
+    def __init__(self, model_name="llama3.2:3b", norms_file="norms.txt"):
         print(f"📦 Loading norm detection with Ollama ({model_name})...")
         self.model_name = model_name
 
